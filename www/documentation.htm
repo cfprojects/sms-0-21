@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+	<title>CFSMS Documentation</title>
+	<style type="text/css">
+	body, td {
+		font-family: Arial;
+		font-size: 12px;
+		}
+	th {
+		font-family: Arial;
+		font-size: 14px;
+		font-weight: bold;
+		background-color:#dcdcdc;
+		}
+	.small{font-size:10px;}
+	h1 {font-size:22px;color:#ffffff;background-color:#000000;padding:3px 3px 3px 10px;}
+	h2 {font-size:18px;}
+	h3 {font-size:14px;background-color:#cecece;padding:3px 3px 3px 10px;}
+	a {color:#0000ff;text-decoration:none;}
+	a:hover {text-decoration:underline;color:#ff0000}
+	pre {background-color:#f0f0f0;border:1px solid #dddddd;display:inline;}
+	</style>
+</head>
+<body>
+<h1>CFSMS Documentation</h1>
+<div class="small">
+	Version: 0.1<br>
+	Build Date: 04/13/2009<br>
+	Created By: <a href="mailto:john@blayter.com?subject=sms">John Blayter</a><br>
+	<a href="http://www.blayter.com/john/sms/">Project Page</a> | <a href="http://www.blayter.com/john/index.cfm/sms">Blog</a> | <a href="http://cfsms.riaforge.com/">RIA Forge</a> | <a href="http://cfsms.riaforge.org/index.cfm?event=page.issues">Known Issues</a> | <a href="http://cfsms.riaforge.com/index.cfm?event=action.download">Download</a><br>
+	License: <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache License, Version 2</a><br/>
+	<h2>Revision History</h2>
+	<h3>0.1</h3>
+	Initial release
+	<h3>0.2</h3>
+	<ul>
+		<li>Changed the settings to be based in the baseComponent.cfc</li>
+		<li>Moved the keywordProcess function into the smsSettingsService.cfc so that way any custom logic or integration that you have with your application is isolated to a single file. This should make it easier to upgrade the CFSMS project in your application in the future.</li>
+		<li>Added the provider_id to the sms_queue table and getProviderId() and setProviderId() to the smsBean.cfc. Depending on the aggregator they do respond with an ID. This is just so you can track it as well.</li>
+		<li>Added the getGateway() and setGateway() to the smsBean.cfc. This is so you can manually overwrite the gateway when sending or recieving a message. I also changed the keywordProcess() to inherit the changed gateway from an incomming message to an outgoing message if it is different from the default gateway provider.</li>
+		<li>Tried to add some more documentation</li>
+		<li>Changed the outboundClickATell() to capture the providerId of the outgoing message</li>
+		<li>Changed the outboundMXTelcom() to use the username and password settings from the baseComponent.cfc and the values from the smsBean.</li>
+		<li>Added the getCountry() and setCountry to the smsBean.cfc. It defaults to US so it will auto format US based phone numbers.</li>
+	</ul>
+</div>
+
+<h1>Table of Contents</h1>
+<ol>
+	<li><a href="#overview">Overview</a></li>
+	<li><a href="#aggregators">Supported Aggregators</a></li>
+	<li><a href="#work">How does this work?</a></li>
+	<li><a href="#customize">Customizing to interact with your application</a></li>
+</ol>
+
+<a name="overview"></a><h1>Overview</h1>
+<p>CFSMS is an application that allows you to integrate incoming and outgoing SMS messages into your application without using the SMS Event Gateway in the ColdFusion administrator. In my experiance if you want to use the SMS Gateway it is a huge ordeal just trying to talk to a single phone company like Sprint, Verizon or AT&amp;T. Once you track down who you are supposed to talk to they pretty much hang up on you unless you are planning to send millions of text messages through to their users. Not to mention they have no clue about the SMS Gateway that is built into ColdFusion. So that is where SMS Aggregators come in. SMS Aggregators already have the relationship with all (or most) of the cell phone carriers around the world. They provide a single connection to the rest of the world's cell phone's by providing developers API's that are basically HTTP POSTS and GETS.</p>
+<p>The CFSMS application was built in a Service Orientated Architecture so it should be easy to slide in to any existing OO application. It was also built without any framework or ORM so it could be put into an legacy application easily.<br>
+</p>
+<a name="aggregators"></a><h1>Supported Aggregators</h1>
+
+<h3>ClickAtell</h3>
+<p>Right now this just supports outgoing. I will have this working with 2 way very soon. You can sign up for ClickATell <a href="http://www.clickatell.com/products/gateway.php">here</a> and add 400 text messages for only $14. They do have to verify the order by phone before your credits are activated. But it only takes a few minutes for them to call you back.</p>
+<p>In my experiance if you are doing low volumes or just working up a proof of concept then ClickAtell is fine. If you are looking at 2 way interaction and or high volume then you will need to look at Textopoly / MXTelcom.</p>
+
+<h3>Textopoly / MXTelcom (Incoming &amp; Outgoing)</h3>
+<p>If you are planning on integrating both incoming and outgoing SMS messages I highly recommend <a href="http://www.textopoly.com/index.php">Textopoly</a>. They are resellers for MXTelcom and are awesome to work with. </p>
+
+<h3>BulkSMS</h3>
+<p>Not yet supported</p>
+
+<a name="work"></a><h1>How does this work?</h1>
+<h2>Installation</h2>
+<ol>
+	<li>Run the install.sql to create the tables.</li>
+	<li>In the baseComponent.cfc you will need to change the <pre>cfc.dsn = "blayter_demo";</pre> to whatever your data source is.</li>
+	<li>You will need to sign up for an account with an SMS Aggregator. Once you do that you need to make sure that the <pre>cfc.gatewayProvider	= "clickAtell";</pre> in the smsService.cfc is set to your aggregator.</li>
+	<li>After signup you will need the API username password and sometimes an api id (for ClickATell). Inside the smsService.cfc you will need to look for the outboundClickATell or whatever aggregator you are using and enter in your username and password into there.</li>
+</ol>
+
+<h2>Outgoing</h2>
+<p>Take a look at the <a href="smsOut.cfm">smsOut.cfm</a> to see how an outgoing SMS is created.</p>
+
+<h2>Incomming</h2>
+<p>Take a look at the <a href="sms2wayExample.cfm">sms2wayExample.cfm</a> to see how an inbound SMS is treated and how a outgoing SMS is created based upon the text sent in.</p>
+
+<a name="customize"></a><h1>Customizing to interact with your application</h1>
+<h2>Incomming</h2>
+<p>When a incomming message happens and you tell the service to processKeywords=true then the keywordProcess() function in the smsService.cfc will be called. You need to customize this function to react like you want it to. Look for strings that people should be texting in like "VOTE 1" and then do the proper action in your application.</p>
+
+<a name="inside"></a><h1>Description into the inside</h1>
+<p></p>
+
+<h1>FAQ</h1>
+<h2>I don't want to use MSSQL. What can I do?</h2>
+<p>
+	You will need to go through the install.sql file and see the current database schema. You will also need to go through the smsDAO.cfc and look for getdate() and
+	also look in the <string>create()</string> function and change where I get the record of the ID just inserted <pre>SELECT ident_current('sms_queue') AS new_sms_id;</pre>.
+	Once you have those changed you should be set. 
+</p>
+<p>
+	If you are able to make the approperiate changes and a non-descructive install.sql script I would love to integrate that back into the project and give you credit.
+</p>
+<h2>You don't support an aggregator that I want to use. How do I add them into the system?</h2>
+<p>
+	First thing is I would create a structure in the baseComponent.cfc to store the API Username and Password. Second you would need to create your own function for the new
+	SMS Aggregator. They are just simple CFHTTP calls but I would name it something like outboundMyNewProvider(). Third thing you would do is to change the outboundProcess() to
+	have an additional case statement to call your new outboundMyNewProvider(). Last you would change the cfc.sms.gatewayProvider in the baseComponent to match the case value 
+	that you added in the outboundProcess().
+</p>
+<p>
+	Again if you are willing to share the code for your new provider I would love to intergrate it back into the project and give you credit for the addition.
+</p>
+<h2>Using the full phone number and sending SMS outside the US and Canada</h2>
+<p>
+	You need to use the full phone number for the message to get through including the country code. However since I am lazy and based in the US I have the formatMobile() function. The
+	formatMobile() function looks at the phone number as well as the country code from the smsBean and prepends a 1 if the number is only 10 digits long for the United States and Canada.
+	Otherwise it will just pass whatever number passed in back out. So if you are sending a text to the UK you need to pass in UK as the country code when adding an incomming or outgoing
+	message.
+</p>
+<h1>TODO</h1>
+<p>This is a brain dump of things that I want to do</p>
+<ul>
+	<li>Better documentation with better examples.</li>
+	<li>Get a working 2 way demo up on blayter.com so people can vote for something</li>
+	<li>I need to move the keyword process into its own CFC so that way updates to the code won't overwrite any customizations that you do.</li>
+	<li>Need to have a general settings file or function for API user names, passwords and such</li>
+	<li>Work on supporting the ClickATell callback URL</li>
+</ul>
+<script type="text/javascript">
+<!--
+var pageTracker = _gat._getTracker("UA-139648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+//-->
+</script>
+</body>
+</html>
